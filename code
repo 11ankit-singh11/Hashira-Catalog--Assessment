@@ -1,0 +1,78 @@
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.file.*;
+import java.util.*;
+import com.google.gson.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        
+        String inputPath = "input.json";  
+        String jsonStr = new String(Files.readAllBytes(Paths.get(inputPath)));
+        JsonObject rootObj = JsonParser.parseString(jsonStr).getAsJsonObject();
+
+        JsonObject keysObj = rootObj.getAsJsonObject("keys");
+        int n = keysObj.get("n").getAsInt();
+        int k = keysObj.get("k").getAsInt();
+        int m = k - 1;
+
+        
+        List<Point> pts = new ArrayList<>();
+        for (Map.Entry<String, JsonElement> entry : rootObj.entrySet()) {
+            String key = entry.getKey();
+            if (key.equals("keys")) continue;
+            JsonObject pObj = entry.getValue().getAsJsonObject();
+            int x = Integer.parseInt(key);
+            int base = Integer.parseInt(pObj.get("base").getAsString());
+            String valueStr = pObj.get("value").getAsString();
+            BigInteger y = new BigInteger(valueStr, base);
+            pts.add(new Point(BigInteger.valueOf(x), y));
+        }
+
+      
+        if (pts.size() < k) {
+            System.err.println("Not enough points to determine polynomial");
+            return;
+        }
+        List<Point> usePts = pts.subList(0, k);
+
+        BigInteger c = computeConstantTerm(usePts);
+        System.out.println(c.toString());
+    }
+
+   
+    static class Point {
+        BigInteger x, y;
+        Point(BigInteger x, BigInteger y) {
+            this.x = x; this.y = y;
+        }
+    }
+
+    static BigInteger computeConstantTerm(List<Point> pts) {
+        int k = pts.size();
+        BigInteger result = BigInteger.ZERO;
+        for (int i = 0; i < k; i++) {
+            BigInteger xi = pts.get(i).x;
+            BigInteger yi = pts.get(i).y;
+
+          
+            BigInteger num = BigInteger.ONE;
+            
+            BigInteger den = BigInteger.ONE;
+
+            for (int j = 0; j < k; j++) {
+                if (j == i) continue;
+                BigInteger xj = pts.get(j).x;
+                num = num.multiply(xj.negate());
+                den = den.multiply(xi.subtract(xj));
+            }
+
+            BigInteger term = yi.multiply(num);
+           
+            term = term.divide(den);
+
+            result = result.add(term);
+        }
+        return result;
+    }
+}
